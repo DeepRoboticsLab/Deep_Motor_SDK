@@ -8,7 +8,9 @@ SDK提供了can通讯、关节使能、关节控制等功能，并在example文�
 ## 2 例程的编译和运行
 ### 2.1 检查can口通道
 例程原始代码中默认使用的can接口为can0，在运行例程前请先在终端中输入`ip a`，以获取实际使用设备的can接口名称。
+
 <img src="./doc/cancheck.png"/>
+
 如果所使用的设备的can接口不是can0，请在例程代码中将can0修改为实际的通道。
 ```c
 DrMotorCan *can = DrMotorCanCreate("can0", true);
