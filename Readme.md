@@ -27,7 +27,7 @@ single_motor例程默认会与`motor_id = 1`的关节进行通信，若与实际
 ```c
 uint8_t motor_id = 1;
 ```
-multi_motor例程默认会与motor_id为0~2的关节进行通信，若与实际的关节id不符，请在代码中进行相应的修改。
+multi_motor例程默认会与motor_id为1~2的关节进行通信，若与实际的关节id不符，请在代码中进行相应的修改。
 
 ### 2.3 编译
 example文件夹中已提供了可执行文件single_motor和multi_motor。若对原始的例程代码进行了修改，则需要在/Deep_Motor_SDK路径下打开一个终端中，在终端中输入`./script/compile.sh`命令重新编译例程代码。
