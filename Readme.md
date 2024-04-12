@@ -1,6 +1,6 @@
 # Deep_Motor_SDK
 
-SDK提供了can通讯、关节使能、关节控制等功能，并在example文件夹中提供了单关节控制single_motor和多关节控制multi_motor的例程。
+SDK提供了can通讯、关节使能、关节控制等功能，并在example文件夹中提供了单关节控制single_motor和多关节控制multi_motor的例程。app文件夹中是关节调试工具软件，分别适用于Windows平台和Linux平台，可参考产品手册进行使用。
 
 ## 1 环境依赖
 目前仅支持在Linux系统中编译运行。
