@@ -22,6 +22,15 @@ enum SendRecvRet{
     //接收超时错误返回-2
     //接收epoll错误返回-3
     //接收长度错误返回-4
+
+    //*******************************
+    //SendRecvRet: return value of SendRecv function
+    //*******************************
+    //return 0: when no error
+    //return -1 send length error
+    //return -2 receive timeout error
+    //return -3 receive epoll error
+    //return -4 receive length error
     kNoSendRecvError = 0,
     kSendLengthError = -1,
     kRecvTimeoutError = -2,
@@ -30,6 +39,7 @@ enum SendRecvRet{
 };
 
 //检查SendRecv函数返回值
+//Check the return value of SendRecv function
 void CheckSendRecvError(uint8_t motor_id, int code){
     switch (code)
     {
@@ -63,6 +73,17 @@ enum MotorErrorType{
     //bit 3: 关节过温标志位
     //bit 4: 驱动板过温标志位
     //bit 5: Can超时标志位
+
+    //*******************************
+    //MotorErrorType: the return value of SendRecv function
+    //*******************************
+    //all 0: no error
+    //bit 0: over voltage flag
+    //bit 1: under voltage flag
+    //bit 2: over current flag
+    //bit 3: motor over temp flag
+    //bit 4: driver board over temp flag
+    //bit 5: can timeout flag
     kMotorNoError = 0,
     kOverVoltage = (0x01 << 0),
     kUnderVoltage = (0x01 << 1),
@@ -73,6 +94,7 @@ enum MotorErrorType{
 };
 
 //检查关节状态返回值
+//Check motor state
 void CheckMotorError(uint8_t motor_id, uint16_t code){
     if(code != kMotorNoError){
         if(code & kOverVoltage){
@@ -96,7 +118,8 @@ void CheckMotorError(uint8_t motor_id, uint16_t code){
     }
 }
 
-//用于存储电机返回的数据
+//存储电机返回的数据
+//Struct saving data from motor
 typedef struct
 {
     uint8_t motor_id_;
@@ -109,19 +132,22 @@ typedef struct
     uint16_t error_;
 }MotorDATA;
 
-//用于创建MotorDATA实例
+//创建MotorDATA实例
+//Create MotorDATA object
 MotorDATA *MotorDATACreate(){
     MotorDATA *motor_data = (MotorDATA*)malloc(sizeof(MotorDATA));
     motor_data->error_ = kMotorNoError;
     return motor_data;
 }
 
-//用于销毁MotorDATA实例
+//销毁MotorDATA实例
+//Destroy MotorData object
 void MotorDATADestroy(MotorDATA *motor_data){
     free(motor_data);
 }
 
-//用于存储发向电机的数据
+//存储发向电机的数据
+//Struct of cmd sending to motor
 typedef struct
 {
     uint8_t motor_id_;
@@ -133,19 +159,22 @@ typedef struct
     float kd_;
 }MotorCMD;
 
-//用于创建MotorCMD实例
+//创建MotorCMD实例
+//Create MotorCMD object
 MotorCMD *MotorCMDCreate(){
     MotorCMD *motor_cmd = (MotorCMD*)malloc(sizeof(MotorCMD));
     return motor_cmd;
 }
 
-//用于往MotorCMD写入普通命令
+//往MotorCMD写入普通命令
+//Write normal cmd into MotorCMD
 void SetNormalCMD(MotorCMD *motor_cmd, uint8_t motor_id, uint8_t cmd){
     motor_cmd->motor_id_ = motor_id;
     motor_cmd->cmd_ = cmd;
 }
 
-//用于往MotorCMD写入控制命令
+//往MotorCMD写入控制命令
+//Write control cmd into MotorCMD
 void SetMotionCMD(MotorCMD *motor_cmd, uint8_t motor_id, uint8_t cmd, float position, float velocity, float torque, float kp, float kd){
     motor_cmd->motor_id_ = motor_id;
     motor_cmd->cmd_ = cmd;
@@ -156,12 +185,14 @@ void SetMotionCMD(MotorCMD *motor_cmd, uint8_t motor_id, uint8_t cmd, float posi
     motor_cmd->kd_ = kd;
 }
 
-//用于销毁MotorCMD实例
+//销毁MotorCMD实例
+//Destroy MotorCMD object
 void MotorCMDDestroy(MotorCMD *motor_cmd){
     free(motor_cmd);
 }
 
-//用于将MotorCMD中的float数据转换为CAN协议中发送的uint数据
+//将MotorCMD中的float数据转换为CAN协议中发送的uint数据
+//Transform the float data in MotorCMD into uint data in can protocol
 void FloatsToUints(const MotorCMD *param, uint8_t *data)
 {
     uint16_t _position = FloatToUint(param->position_, POSITION_MIN, POSITION_MAX, SEND_POSITION_LENGTH);
@@ -179,7 +210,8 @@ void FloatsToUints(const MotorCMD *param, uint8_t *data)
     data[7] = _torque >> 8;
 }
 
-//用于将CAN协议中收到的uint数据转换为MotorDATA中的float数据
+//将CAN协议中收到的uint数据转换为MotorDATA中的float数据
+//Transform the uint data in can protocol into float data in MotorDATA
 void UintsToFloats(const struct can_frame *frame, MotorDATA *data)
 {
     const ReceivedMotionData *pcan_data = (const ReceivedMotionData*)frame->data;
@@ -196,11 +228,13 @@ void UintsToFloats(const struct can_frame *frame, MotorDATA *data)
 }
 
 //结合motor_id和cmd形成CAN协议中的id
+//Form the can id with motor_id and cmd
 uint16_t FormCanId(uint8_t cmd, uint8_t motor_id){
     return (cmd << CAN_ID_SHIFT_BITS) | motor_id;
 }
 
-//用于根据MotorCMD进行所发送can帧的填充
+//根据MotorCMD进行所发送can帧的填充
+//Fill in can frame with MotorCMD
 void MakeSendFrame(const MotorCMD *cmd, struct can_frame *frame_ret){
     frame_ret->can_id = FormCanId(cmd->cmd_, cmd->motor_id_);
     switch (cmd->cmd_)
@@ -235,7 +269,8 @@ void MakeSendFrame(const MotorCMD *cmd, struct can_frame *frame_ret){
     }
 }
 
-//用于根据收到的can帧进行MotorDATA的填充
+//根据收到的can帧进行MotorDATA的填充
+//Fill in MotorDATA with can frame received
 void ParseRecvFrame(const struct can_frame *frame_ret, MotorDATA *data){
     uint32_t frame_id = frame_ret->can_id;
     uint32_t cmd = (frame_id >> CAN_ID_SHIFT_BITS) & 0x3f;
@@ -275,6 +310,7 @@ void ParseRecvFrame(const struct can_frame *frame_ret, MotorDATA *data){
 }
 
 //DrMotorCan类，用于保存can的相关配置和资源
+//DrMotorCan struct, saving can configs and resources
 typedef struct{
     bool is_show_log_;
     int can_socket_;
@@ -282,7 +318,8 @@ typedef struct{
     pthread_mutex_t rw_mutex;
 }DrMotorCan;
 
-//用于创建DrMotorCan实例
+//创建DrMotorCan实例
+//Create DrMotorCan object
 DrMotorCan* DrMotorCanCreate(const char *can_name, bool is_show_log){
     DrMotorCan* can = (DrMotorCan*)malloc(sizeof(DrMotorCan));
     if(can != NULL){
@@ -333,13 +370,15 @@ DrMotorCan* DrMotorCanCreate(const char *can_name, bool is_show_log){
     return can;
 };
 
-//用于销毁DrMotorCan实例
+//销毁DrMotorCan实例
+//Destroy DrMotorCan object
 void DrMotorCanDestroy(DrMotorCan *can){
     close(can->can_socket_);
     free(can);
 }
 
 //使用DrMotorCan进行数据的发送和接收
+//Send and receive data via DrMotorCan
 int SendRecv(DrMotorCan *can, const MotorCMD *cmd, MotorDATA *data){
     struct can_frame send_frame, recv_frame;
     MakeSendFrame(cmd, &send_frame);

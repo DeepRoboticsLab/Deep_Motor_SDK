@@ -17,6 +17,7 @@ void sigint_handler(int sig) {
 }
 
 //每秒发送一次命令，检查can总线上关节的状态
+//Send one command per second to check state of on-bus motors
 void *MotorStateCheckThreadFunc(void *args){
     MotorCheckThreadParam *params = (MotorCheckThreadParam *)args;
     MotorCMD *motor_cmd = MotorCMDCreate();
