@@ -112,3 +112,7 @@ DrMotorCanDestroy(can);
 MotorCMDDestroy(motor_cmd);
 MotorDATADestroy(motor_data);
 ```
+
+## 致谢
+Python版本的J60关节控制[例程](./python_motor_examples)由哈尔滨工程大学的刘博士提供，可参照C语言版SDK的使用方式，在Python版例程的基础上开发控制关节。
+感谢刘博士[haikuo00zero](https://github.com/haikuo00zero)的无私开源与贡献！

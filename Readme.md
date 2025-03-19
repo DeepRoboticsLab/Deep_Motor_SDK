@@ -116,3 +116,7 @@ DrMotorCanDestroy(can);
 MotorCMDDestroy(motor_cmd);
 MotorDATADestroy(motor_data);
 ```
+
+## Acknowledgements
+The Python version of the J60 joint control [examples](./python_motor_examples) is provided by Dr Liu from Harbin Engineering University, which can be used to develop control joints based on the Python version examples by referring to the use of the C version of the SDK.
+Thanks to Dr Liu [haikuo00zero](https://github.com/haikuo00zero) for his selfless open source and contribution!
