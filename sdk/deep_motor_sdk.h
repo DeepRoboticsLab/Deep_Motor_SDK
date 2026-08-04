@@ -320,60 +320,99 @@ typedef struct{
 
 //创建DrMotorCan实例
 //Create DrMotorCan object
-DrMotorCan* DrMotorCanCreate(const char *can_name, bool is_show_log){
-    DrMotorCan* can = (DrMotorCan*)malloc(sizeof(DrMotorCan));
-    if(can != NULL){
-        can->is_show_log_ = is_show_log;
+DrMotorCan *DrMotorCanCreate(const char *can_name, bool is_show_log)
+{
+    int flags;
+    struct ifreq ifr;
+    struct sockaddr_can addr;
+    struct epoll_event event;
 
-        if((can->can_socket_ = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0){
-            printf("[ERROR] Socket creation failed\r\n");
-            exit(-1);
-        }
+    DrMotorCan *can = (DrMotorCan *)malloc(sizeof(DrMotorCan));
+    if (can == NULL)
+        return NULL;
+        
+    can->can_socket_ = -1;
+    can->epoll_fd_ = -1;
+    can->is_show_log_ = is_show_log;
 
-        int flags = fcntl(can->can_socket_, F_GETFL, 0);
-        if(flags == -1){
-            printf("[ERROR] Getting socket flags failed\r\n");
-            exit(-1);
-        }
-        flags |= O_NONBLOCK;
-        if(fcntl(can->can_socket_, F_SETFL, flags) == -1){
-            printf("[ERROR] Setting socket to non-blocking mode failed\r\n");
-            exit(-1);
-        }
-
-        struct ifreq ifr;
-        struct sockaddr_can addr;
-        strcpy(ifr.ifr_name, can_name);
-        ioctl(can->can_socket_, SIOCGIFINDEX, &ifr);
-        addr.can_ifindex = ifr.ifr_ifindex;
-        addr.can_family = AF_CAN;
-        if(bind(can->can_socket_, (struct sockaddr*)&addr, sizeof(addr)) < 0){
-            printf("[ERROR] Bind failed\r\n");
-            close(can->can_socket_);
-            exit(-1);
-        }
-
-        can->epoll_fd_ = epoll_create1(0);
-        if(can->epoll_fd_ == -1){
-            printf("[ERROR] Error creating epoll instance\r\n");
-            exit(-1);
-        }
-
-        struct epoll_event event;
-        event.events = EPOLLIN;
-        event.data.fd = can->can_socket_;
-        if(epoll_ctl(can->epoll_fd_, EPOLL_CTL_ADD, can->can_socket_, &event) == -1){
-            printf("[ERROR] Adding socket to epoll failed\r\n");
-            exit(-1);
-        }
+    if (pthread_mutex_init(&can->rw_mutex, NULL) != 0)
+    {
+        free(can);
+        return NULL;
     }
+
+    if ((can->can_socket_ = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0)
+    {
+        printf("[ERROR] Socket creation failed\r\n");
+        goto failed;
+    }
+
+    flags = fcntl(can->can_socket_, F_GETFL, 0);
+    if (flags == -1 || fcntl(can->can_socket_, F_SETFL, flags | O_NONBLOCK) == -1)
+    {
+        printf("[ERROR] Getting socket flags failed\r\n");
+        goto failed;
+    }
+
+    strcpy(ifr.ifr_name, can_name);
+    if (ioctl(can->can_socket_, SIOCGIFINDEX, &ifr) < 0)
+    {
+        printf("[ERROR] Setting socket to non-blocking mode failed\r\n");
+        goto failed;
+    }
+
+    addr.can_ifindex = ifr.ifr_ifindex;
+    addr.can_family = AF_CAN;
+    if (bind(can->can_socket_, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+    {
+        printf("[ERROR] Bind failed\r\n");
+        goto failed;
+    }
+
+    can->epoll_fd_ = epoll_create1(0);
+    if (can->epoll_fd_ == -1)
+    {
+        printf("[ERROR] Error creating epoll instance\r\n");
+        goto failed;
+    }
+
+    event.events = EPOLLIN;
+    event.data.fd = can->can_socket_;
+    if (epoll_ctl(can->epoll_fd_, EPOLL_CTL_ADD, can->can_socket_, &event) == -1)
+    {
+        printf("[ERROR] Adding socket to epoll failed\r\n");
+        goto failed;
+    }
+
     return can;
-};
+
+failed:
+    if (can->can_socket_ >= 0)
+        close(can->can_socket_);
+    if (can->epoll_fd_ >= 0)
+        close(can->epoll_fd_);
+    pthread_mutex_destroy(&can->rw_mutex);
+    free(can);
+  //return NULL;
+    exit(-1);
+}
 
 //销毁DrMotorCan实例
 //Destroy DrMotorCan object
-void DrMotorCanDestroy(DrMotorCan *can){
-    close(can->can_socket_);
+void DrMotorCanDestroy(DrMotorCan *can)
+{
+    if (can->epoll_fd_ >= 0)
+    {
+        close(can->epoll_fd_);
+        can->epoll_fd_ = -1;
+    }
+    if (can->can_socket_ >= 0)
+    {
+        close(can->can_socket_);
+        can->can_socket_ = -1;
+    }
+
+    pthread_mutex_destroy(&can->rw_mutex);
     free(can);
 }
 
